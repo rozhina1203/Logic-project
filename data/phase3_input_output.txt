@@ -1,0 +1,2 @@
+Satisfiable
+[list of true variables]
