@@ -10,12 +10,14 @@ class BasePhase(ABC):
     and a 'process' method that must be implemented by concrete phases.
     """
 
-    def __init__(self, input_filepath: str):
+    def __init__(self, input_filepath=None):
         """
         Initializes the BasePhase with the path to the input file.
         Args:
             input_filepath (str): Path to the input text file.
         """
+        if input_filepath is None:
+            return
         self.input_file = Path(input_filepath)
 
         # The output file will be named like 'input_file_name_output.txt' in the same directory.
