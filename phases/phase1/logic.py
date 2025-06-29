@@ -21,17 +21,16 @@ class Phase1(BasePhase):
     state "O" defines operators
     state "L" defines left parenthese
     state "R" defines right parenthese"""
-    
 
     def is_valid(self, expr) -> bool:
         state = 'S'
         fstack = list()
         tokens = self.tokenize(expr)
-        
+
         for c in tokens:
             if c == '(':
                 fstack.append('(')
-            
+
             elif c == ')':
                 if not fstack:
                     return False
@@ -46,7 +45,7 @@ class Phase1(BasePhase):
                     state = 'P'
                 else:
                     return False
-                
+
             elif state == 'N':
                 if c == '¬':
                     state = 'N'
@@ -56,7 +55,7 @@ class Phase1(BasePhase):
                     state = 'P'
                 else:
                     return False
-            
+
             elif state == 'P':
                 if c in {'∧', '∨', '→', '↔'}:
                     state = 'O'
@@ -64,7 +63,7 @@ class Phase1(BasePhase):
                     state = 'R'
                 else:
                     return False
-                
+
             elif state == 'O':
                 if c == '¬':
                     state = 'N'
@@ -88,11 +87,12 @@ class Phase1(BasePhase):
             elif state == 'R':
                 if c in {'∧', '∨', '→', '↔'}:
                     state = 'O'
-                elif c == ')':   
+                elif c == ')':
                     state = 'R'
                 else:
                     return False
         return state in {'P', 'R'} and not fstack
+
     def tokenize(self, expr):
         tokens = []
         for ch in expr:
@@ -101,10 +101,10 @@ class Phase1(BasePhase):
             else:
                 tokens.append(ch)
         return tokens
-    
+
     def is_operator(self, c):
         return c in ['¬', '∧', '∨', '→', '↔']
-    
+
     def presedence(self, op):
         if op == '¬':
             return 1
@@ -117,7 +117,7 @@ class Phase1(BasePhase):
         if op == '↔':
             return 5
         return 100
-    
+
     def parse_tree(self, expr):
         tokens = self.tokenize(expr)
         operators = []
@@ -153,30 +153,28 @@ class Phase1(BasePhase):
                 proposition.append(Node(t))
             else:
                 pass
-        
+
         while operators:
             pop_op()
-        
+
         return proposition[-1]
-    
-    def preorder(self, node, depth = 0):
+
+    def preorder(self, node, depth=0):
         if node is None:
             return ''
-        
+
         result = str('  ' * depth + str(node.value)) + '\n'
-        left = self.preorder(node.left, depth+1)
-        right = self.preorder(node.right, depth+1)
+        left = self.preorder(node.left, depth + 1)
+        right = self.preorder(node.right, depth + 1)
 
         if left:
-            result +=  left
+            result += left
         if right:
             result += right
 
         return result
-    
-    
+
     def process(self, input_data: str) -> str:
-        result_content = "Ha Ha"
         if self.is_valid(input_data):
             parsetree = self.parse_tree(input_data)
             result_content = self.preorder(parsetree)
