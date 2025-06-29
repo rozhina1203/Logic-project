@@ -2,12 +2,14 @@
 
 from ..base_phase import BasePhase
 
-class Node():
-            def __init__(self, val):
-                self.value = val
-                self.left = None
-                self.right = None
-                
+
+class Node:
+    def __init__(self, val):
+        self.value = val
+        self.left = None
+        self.right = None
+
+
 class Phase1(BasePhase):
     """
     Implements Phase 1: Well-Formed Formula (WFF) validation and Parse Tree generation.
