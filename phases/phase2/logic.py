@@ -10,29 +10,42 @@ class Phase2(BasePhase):
 
     def process(self, input_data: str) -> str:
         """
-        Processes the input WFF and converts it to its equivalent CNF.
+        Processes the input Well-Formed Formula (WFF) and converts it to its equivalent Conjunctive Normal Form (CNF).
+
+        This method performs the following steps:
+        1. Parses the input string into a parse tree representation using Phase1.
+        2. Converts the parse tree to CNF format by applying logical transformations.
+        3. Converts the CNF parse tree back into a string representation.
 
         Args:
-            input_data (str): The propositional logic formula as a string (assumed to be WFF).
+            input_data (str): The propositional logic formula as a string (assumed to be a valid WFF).
 
         Returns:
-            str: The formula in CNF format.
+            str: The formula converted into CNF format as a string.
         """
-        # Parse the input to create a tree
+        # Parse the input to create a tree representation of the formula
         tree = Phase1().parse_tree(input_data)
 
-        # Convert to CNF through multiple steps
+        # Convert the parse tree to CNF format through multiple logical transformation steps
         cnf_tree = self.convert_to_cnf(tree)
 
-        # Convert tree back to string format
+        # Convert the CNF parse tree back to string format for output
         return self.tree_to_string(cnf_tree)
 
     def convert_to_cnf(self, root):
         """
-        Converts a parse tree to CNF using the standard algorithm:
-        1. Eliminate implications (→) and bi-conditionals (↔)
-        2. Move negations inward (De Morgan's laws)
-        3. Distribute OR over AND
+        Converts a parse tree representation of a Well-Formed Formula (WFF) into Conjunctive Normal Form (CNF).
+
+        This method applies a series of logical transformations to the input tree:
+        1. Eliminates implications and biconditionals.
+        2. Moves negations inward using De Morgan's laws and other simplifications.
+        3. Distributes OR over AND to achieve CNF structure.
+
+        Args:
+            root (Node): The root node of the parse tree representing the WFF.
+
+        Returns:
+            Node: The root node of the transformed parse tree in CNF format.
         """
         if root is None:
             return None
@@ -50,9 +63,21 @@ class Phase2(BasePhase):
 
     def eliminate_implications(self, node):
         """
-        Eliminates implications and biconditionals using the rules:
-        A → B ≡ ¬A ∨ B
-        A ↔ B ≡ (A → B) ∧ (B → A) ≡ (¬A ∨ B) ∧ (¬B ∨ A)
+        Eliminates implications and biconditionals in a parse tree using logical equivalences.
+
+        This method transforms nodes in the parse tree to remove implications (→) and biconditionals (↔)
+        by applying the following rules:
+        - A → B ≡ ¬A ∨ B
+        - A ↔ B ≡ (A → B) ∧ (B → A) ≡ (¬A ∨ B) ∧ (¬B ∨ A)
+
+        The method processes the tree recursively, ensuring that all implications and biconditionals
+        are eliminated from the entire tree.
+
+        Args:
+            node (Node): The current node in the parse tree.
+
+        Returns:
+            Node: The transformed node with implications and biconditionals eliminated.
         """
         if node is None:
             return None
@@ -107,10 +132,22 @@ class Phase2(BasePhase):
 
     def move_negations_inward(self, node):
         """
-        Moves negations inward using De Morgan's laws:
-        ¬(A ∨ B) ≡ ¬A ∧ ¬B
-        ¬(A ∧ B) ≡ ¬A ∨ ¬B
-        ¬¬A ≡ A
+        Moves negations inward in a parse tree using De Morgan's laws and simplifies double negations.
+
+        This method applies the following transformations:
+        - Double negation elimination: ¬¬A ≡ A
+        - De Morgan's laws:
+            ¬(A ∨ B) ≡ ¬A ∧ ¬B
+            ¬(A ∧ B) ≡ ¬A ∨ ¬B
+        - Retains negation for propositions.
+
+        The method processes the tree recursively to ensure all negations are moved inward.
+
+        Args:
+            node (Node): The current node in the parse tree.
+
+        Returns:
+            Node: The transformed node with negations moved inward.
         """
         if node is None:
             return None
@@ -167,10 +204,20 @@ class Phase2(BasePhase):
 
     def distribute_or_over_and(self, node):
         """
-        Distributes OR over AND using the rule:
-        A ∨ (B ∧ C) ≡ (A ∨ B) ∧ (A ∨ C)
-        (A ∧ B) ∨ C ≡ (A ∨ C) ∧ (B ∨ C)
-        (A ∧ B) ∨ (C ∧ D) ≡ (A ∨ C) ∧ (A ∨ D) ∧ (B ∨ C) ∧ (B ∨ D)
+        Distributes OR over AND in a parse tree to achieve Conjunctive Normal Form (CNF).
+
+        This method applies the following logical equivalences:
+        - A ∨ (B ∧ C) ≡ (A ∨ B) ∧ (A ∨ C)
+        - (A ∧ B) ∨ C ≡ (A ∨ C) ∧ (B ∨ C)
+        - (A ∧ B) ∨ (C ∧ D) ≡ (A ∨ C) ∧ (A ∨ D) ∧ (B ∨ C) ∧ (B ∨ D)
+
+        The method processes the tree recursively to ensure all OR operations are distributed over AND.
+
+        Args:
+            node (Node): The current node in the parse tree.
+
+        Returns:
+            Node: The transformed node with OR distributed over AND.
         """
         if node is None:
             return None
@@ -263,6 +310,16 @@ class Phase2(BasePhase):
     def tree_to_string(self, node):
         """
         Converts a parse tree back to string format.
+
+        This method traverses the parse tree and generates a string representation of the formula.
+        It handles propositions, unary operators (e.g., negation), and binary operators (e.g., AND, OR).
+        Parentheses are added for clarity based on operator precedence and associativity.
+
+        Args:
+            node (Node): The current node in the parse tree.
+
+        Returns:
+            str: The string representation of the formula.
         """
         if node is None:
             return ""
@@ -306,6 +363,24 @@ class Phase2(BasePhase):
     def needs_parentheses(self, child, parent, is_left):
         """
         Determines if parentheses are needed based on operator precedence.
+
+        This method evaluates whether parentheses are required around a child node
+        in a parse tree based on the precedence and associativity of the operators
+        in the parent and child nodes.
+
+        Rules applied:
+        - Parentheses are not needed for propositions or unary operators (e.g., negation).
+        - Parentheses are required if the child's operator has lower precedence than the parent's operator.
+        - Parentheses may be required for operators with the same precedence, depending on associativity:
+            - Right-associative operators (e.g., →, ↔) require parentheses for the right operand.
+
+        Args:
+            child (Node): The child node in the parse tree.
+            parent (Node): The parent node in the parse tree.
+            is_left (bool): Indicates whether the child is the left operand of the parent.
+
+        Returns:
+            bool: True if parentheses are needed, False otherwise.
         """
         if child.value.isalpha() or child.value == '¬':
             return False
@@ -328,7 +403,25 @@ class Phase2(BasePhase):
     @staticmethod
     def precedence(operator):
         """
-        Returns the precedence of an operator (lower number = higher precedence).
+        Determines the precedence of a logical operator.
+
+        This method returns the precedence of a given operator used in propositional logic.
+        Operators with lower numerical values have higher precedence.
+
+        Precedence levels:
+        - '¬' (NOT): 1
+        - '∧' (AND): 2
+        - '∨' (OR): 3
+        - '→' (IMPLIES): 4
+        - '↔' (BICONDITIONAL): 5
+
+        If the operator is not recognized, a default precedence value of 6 is returned.
+
+        Args:
+            operator (str): A string representing the logical operator.
+
+        Returns:
+            int: The precedence level of the operator.
         """
         precedences = {
             '¬': 1,
