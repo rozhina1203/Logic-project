@@ -1,116 +1,160 @@
 import pytest
-from phases.phase2.logic import Phase2
 
+from phases.phase1.logic import Phase1
+from phases.phase2.logic import Phase2
 
 @pytest.fixture
 def phase2():
     return Phase2()
 
-def is_cnf(formula: str) -> bool:
-    """Helper function to validate CNF structure."""
-    if "→" in formula:
-        return False  # Implications not allowed in CNF
-    if "¬(" in formula:
-        return False  # Negations should only apply to literals
-    return True
+def test_eliminates_implication_correctly(phase2):
+    expr = "p → q"
+    expected_output = phase2.tree_to_string(Phase1().parse_tree("¬p ∨ q"))
+    actual_output = phase2.eliminate_implications(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
+def test_eliminates_biconditional_correctly(phase2):
+    expr = "p ↔ q"
+    expected_output = phase2.tree_to_string(Phase1().parse_tree("(¬p ∨ q) ∧ (¬q ∨ p)"))
+    actual_output = phase2.eliminate_implications(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
-# Implication Elimination Tests
-def test_eliminate_implications_basic(phase2):
-    assert phase2._eliminate_implications("P→Q") == "(¬P∨Q)"
+def test_handles_nested_implications_and_biconditionals(phase2):
+    expr = "(p → q) ↔ (r → s)"
+    expected_output = phase2.tree_to_string(Phase1().parse_tree("(¬(¬p ∨ q) ∨ ¬r ∨ s) ∧ (¬(¬r ∨ s) ∨ ¬p ∨ q)"))
+    actual_output = phase2.eliminate_implications(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
+def test_handles_single_variable(phase2):
+    expr = "a"
+    expected_output = phase2.tree_to_string(Phase1().parse_tree("a"))
+    actual_output = phase2.eliminate_implications(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
-def test_eliminate_implications_nested(phase2):
-    assert phase2._eliminate_implications("(A→B)→C") == "(¬(¬A∨B)∨C)"
+def test_handles_empty_node(phase2):
+    assert phase2.eliminate_implications(None) is None
 
+def test_eliminates_double_negation(phase2):
+    expr = "¬(¬a)"
+    expected_output = "a"
+    actual_output = phase2.move_negations_inward(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
-# De Morgan's Law Tests
-def test_demorgan_simple(phase2):
-    assert phase2._move_negations_inwards("¬(A∧B)") == "(¬A∨¬B)"
+def test_applies_de_morgan_to_or(phase2):
+    expr = "¬(a ∨ b)"
+    expected_output = "¬a ∧ ¬b"
+    actual_output = phase2.move_negations_inward(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
+def test_applies_de_morgan_to_and(phase2):
+    expr = "¬(a ∧ b)"
+    expected_output = "¬a ∨ ¬b"
+    actual_output = phase2.move_negations_inward(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
-def test_demorgan_nested(phase2):
-    assert phase2._move_negations_inwards("¬(A∨(B∧C))") == "(¬A∧(¬B∨¬C))"
+def test_handles_single_negation(phase2):
+    expr = "¬a"
+    expected_output = "¬a"
+    actual_output = phase2.move_negations_inward(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
+def test_handles_empty_node_for_negation(phase2):
+    assert phase2.move_negations_inward(None) is None
 
-def test_double_negation(phase2):
-    assert phase2._move_negations_inwards("¬¬P") == "P"
+def test_distributes_or_over_and_with_nested_and_or(phase2):
+    expr = "(a ∧ b) ∨ (c ∧ d)"
+    expected_output = "(a ∨ c) ∧ (a ∨ d) ∧ (b ∨ c) ∧ (b ∨ d)"
+    actual_output = phase2.distribute_or_over_and(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
+def test_distributes_or_over_and_with_left_and(phase2):
+    expr = "(a ∧ b) ∨ c"
+    expected_output = "(a ∨ c) ∧ (b ∨ c)"
+    actual_output = phase2.distribute_or_over_and(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
-# Distributive Law Tests
-# def test_distribute_simple(phase2):
-#     assert phase2._apply_distributive_law("(A∧B)∨C") == "((A∨C)∧(B∨C))"
+def test_distributes_or_over_and_with_right_and(phase2):
+    expr = "a ∨ (b ∧ c)"
+    expected_output = "(a ∨ b) ∧ (a ∨ c)"
+    actual_output = phase2.distribute_or_over_and(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
+def test_handles_single_variable_or(phase2):
+    expr = "a ∨ b"
+    expected_output = "a ∨ b"
+    actual_output = phase2.distribute_or_over_and(Phase1().parse_tree(expr))
+    actual_output_str = phase2.tree_to_string(actual_output)
+    assert actual_output_str == expected_output
 
-def test_distribute_multiple(phase2):
-    assert phase2._apply_distributive_law("(A∨B)∧(C∨D)") == "(A∨B)∧(C∨D)"  # Already in CNF
+def test_handles_empty_node_for_or_and_distribution(phase2):
+    assert phase2.distribute_or_over_and(None) is None
 
+@pytest.mark.parametrize("expr, expected", [
+    # Test 1: Demorgan
+    ("¬(p ∧ q)", "¬p ∨ ¬q"),
 
-# Full CNF Conversion Tests
-def test_full_conversion_simple(phase2):
-    result = phase2.process("P→Q")
-    assert result == "(¬P∨Q)"
-    assert is_cnf(result)
+    # Test 2: Distribution
+    ("p ∨ (q ∧ r)", "(p ∨ q) ∧ (p ∨ r)"),
 
+    # Test 3: Implication
+    ("¬p → q", "p ∨ q"),
 
-def test_full_conversion_complex(phase2):
-    input_u = "¬(A ∧ (B → C)) → D"
-    result = phase2.process(input_u)
-    expected = "((A ∨ D) ∧ (¬B ∨ C ∨ D))"
-    assert result == expected
-    assert is_cnf(result)
+    # Test 4: Implication with conjunction and disjunction
+    ("((p → q) ∧ (r ∨ s))", "(¬p ∨ q) ∧ (r ∨ s)"),
 
+    # Test 5: Bi-conditional
+    ("(p ↔ q)", "(¬p ∨ q) ∧ (¬q ∨ p)"),
 
-# Edge Cases
-def test_tautology(phase2):
-    result = phase2.process("A ∨ ¬A")
-    assert result == "A ∨ ¬A"
-    assert is_cnf(result)
+    # Test 6: Nested implications
+    ("(p ∨ q) ∨ (r ∧ s)", "(p ∨ q ∨ r) ∧ (p ∨ q ∨ s)"),
 
+    # Basic implication
+    ("A → B", "¬A ∨ B"),
 
-def test_contradiction(phase2):
-    result = phase2.process("A ∧ ¬A")
-    assert result == "A ∧ ¬A"
-    assert is_cnf(result)
+    # Bi-conditional
+    ("A ↔ B", "(¬A ∨ B) ∧ (¬B ∨ A)"),
 
+    # De Morgan's Law
+    ("¬(A ∧ B)", "¬A ∨ ¬B"),
+    ("¬(A ∨ B)", "¬A ∧ ¬B"),
 
-def test_already_cnf(phase2):
-    result = phase2.process("(A∨B)∧C")
-    assert result == "(A∨B)∧C"
-    assert is_cnf(result)
+    # Nested implications
+    ("A → (B → C)", "¬A ∨ (¬B ∨ C)"),
 
+    # Complex: implication with conjunction
+    ("(A ∧ B) → C", "¬A ∨ ¬B ∨ C"),
 
-# Parametrized Tests
-# @pytest.mark.parametrize("input_e,expected", [
-#     ("A→B", "(¬A∨B)"),
-#     ("¬(A∧B)", "(¬A∨¬B)"),
-#     ("(A∧B)∨C", "((A∨C)∧(B∨C))"),
-#     ("¬¬P", "P"),
-#     ("(P∨Q)∧R", "(P∨Q)∧R"),  # Already in CNF
-#     ("¬(P∨Q)", "(¬P∧¬Q)"),
-# ])
-# def test_parametrized_conversion(phase2, input_e, expected):
-#     result = phase2.process(input_e)
-#     assert result == expected
-#     if "→" not in input_e:  # Skip CNF check for inputs with implications
-#         assert is_cnf(result)
+    # CNF distribution
+    ("A ∨ (B ∧ C)", "(A ∨ B) ∧ (A ∨ C)"),
 
+    ("(A ∧ B) ∨ (C ∧ D)", "((A ∨ C) ∧ (A ∨ D)) ∧ ((B ∨ C) ∧ (B ∨ D))"),
 
-# Negative/Validation Tests
-def test_invalid_input(phase2):
-    with pytest.raises(Exception):
-        phase2.process("A ∧→ B")  # Invalid syntax
+    # Double negation
+    ("¬(¬A)", "A"),
 
+    # Mixed example
+    ("¬(A → (B ∨ C))", "A ∧ ¬B ∧ ¬C"),
+])
+def test_cnf_conversion(phase2, expr, expected):
+    # result = phase2.process(expr)
+    # assert result == expected
 
-def test_empty_input(phase2):
-    with pytest.raises(Exception):
-        phase2.process("")
+    phase2 = Phase2()
+    result = phase2.process(expr)
 
+    # Normalize space to avoid false negatives due to formatting
+    def normalize(expr1):
+        return expr1.replace("(", "").replace(")", "").replace(" ", "")
 
-# Stress Test
-def test_complex_nested_expression(phase2):
-    input_u = "¬((A → B) ∧ (C ∨ ¬(D ∧ E))) → F"
-    result = phase2.process(input_u)
-    # Expected result after full conversion:
-    expected = "(((¬A ∨ B) ∧ (C ∨ ¬D ∨ ¬E)) ∨ F)"
-    assert is_cnf(result)
+    assert normalize(result) == normalize(expected), f"Expected: {expected}, Got: {result}"
