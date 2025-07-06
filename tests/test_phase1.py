@@ -12,9 +12,7 @@ def test_valid_formula_simple(phase1):
     assert phase1.process(expr) == expected_output
 
 def test_valid_multiple_negations(phase1):
-    # TODO: Fix this test to match the expected output format.
-    # You can run `pytest -k test_valid_multiple_negations` to see the error.
-    expr = "¬¬a"
+    expr = "¬(¬a)"
     expected_output = (
         "Valid Formula\n"
         "¬\n"
