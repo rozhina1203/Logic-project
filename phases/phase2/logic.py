@@ -277,11 +277,11 @@ class Phase2(BasePhase):
 
                 or_left = Node('∨')
                 or_left.left = copy.deepcopy(left)
-                or_left.right = right.left
+                or_left.right = copy.deepcopy(right.left)
 
                 or_right = Node('∨')
                 or_right.left = copy.deepcopy(left)
-                or_right.right = right.right
+                or_right.right = copy.deepcopy(right.right)
 
                 and_node.left = self.distribute_or_over_and(or_left)
                 and_node.right = self.distribute_or_over_and(or_right)
@@ -293,11 +293,11 @@ class Phase2(BasePhase):
                 and_node = Node('∧')
 
                 or_left = Node('∨')
-                or_left.left = left.left
+                or_left.left = copy.deepcopy(left.left)
                 or_left.right = copy.deepcopy(right)
 
                 or_right = Node('∨')
-                or_right.left = left.right
+                or_right.left = copy.deepcopy(left.right)
                 or_right.right = copy.deepcopy(right)
 
                 and_node.left = self.distribute_or_over_and(or_left)
