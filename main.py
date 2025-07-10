@@ -44,23 +44,24 @@ def get_input_file_path(phase_number: int) -> str:
     default_filename = f"phase{phase_number}_input.txt"  # e.g., phase1_input.txt
     default_path = project_root / "data" / default_filename
 
-    user_input = input(f"Enter input file path (e.g., {default_path} or just filename): ").strip()
-
-    # If the user provides just a filename, assume it's in the 'data/' directory
-    if user_input and not Path(user_input).is_absolute():
-        suggested_path = project_root / "data" / user_input
-        if suggested_path.exists():
-            return str(suggested_path)
-
-    # If the user provides a relative path (e.g., "my_folder/my_file.txt"),
-    # assume it's relative to the project root.
-    if user_input and not Path(user_input).is_absolute():
-        relative_path = project_root / user_input
-        if relative_path.exists():
-            return str(relative_path)
+    # user_input = input(f"Enter input file path (e.g., {default_path} or just filename): ").strip()
+    #
+    # # If the user provides just a filename, assume it's in the 'data/' directory
+    # if user_input and not Path(user_input).is_absolute():
+    #     suggested_path = project_root / "data" / user_input
+    #     if suggested_path.exists():
+    #         return str(suggested_path)
+    #
+    # # If the user provides a relative path (e.g., "my_folder/my_file.txt"),
+    # # assume it's relative to the project root.
+    # if user_input and not Path(user_input).is_absolute():
+    #     relative_path = project_root / user_input
+    #     if relative_path.exists():
+    #         return str(relative_path)
 
     # Otherwise, use the path as provided or the default if empty
-    return user_input if user_input else str(default_path)
+    # return user_input if user_input else str(default_path)
+    return str(default_path)
 
 def main():
     """Main function to run the propositional logic solver with a menu."""
