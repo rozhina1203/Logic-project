@@ -5,20 +5,19 @@ from pathlib import Path
 from phases.phase1.logic import Phase1
 from phases.phase2.logic import Phase2
 from phases.phase3.logic import Phase3
+from phases.phase5.main import Phase5
 
 # --- TEAMMATE: Import your other Phase classes here ---
-# from phases.phase3.main import Phase3
 # from phases.phase4.main import Phase4
-# from phases.phase5.main import Phase5
 
 # Dictionary to map choice numbers to their respective Phase classes
 PHASE_CLASSES = {
     1: Phase1,
     2: Phase2,
     3: Phase3,
+    5: Phase5,
     # --- TEAMMATE: Add your other Phase classes here ---
     # 4: Phase4,
-    # 5: Phase5,
 }
 
 
@@ -28,9 +27,9 @@ def show_menu():
     print("1. Phase 1: Check WFF & Generate Parse Tree")
     print("2. Phase 2: Convert Formula to CNF")
     print("3. Phase 3: Horn SAT Solver")
+    print("5. Phase 5: Verify Natural Deduction")
     # --- TEAMMATE: Add menu options for your other phases here ---
     # print("4. Phase 4: Apply Natural Deduction Rule")
-    # print("5. Phase 5: Verify Natural Deduction")
     print("0. Exit")
 
 
