@@ -191,14 +191,14 @@ class ModusTollens(LogicRule):
         if implication.value != LogicSymbol.IMPLIES.value or implication.left is None or implication.right is None:
             raise LogicRuleError("First node must be an implication (→) with left and right children")
 
-        if negated_consequent.value != LogicSymbol.NOT.value or negated_consequent.left is None:
+        if negated_consequent.value != LogicSymbol.NOT.value or negated_consequent.right is None:
             raise LogicRuleError("Second node must be a negation (¬B)")
 
-        if not self._nodes_equal(negated_consequent.left, implication.right):
+        if not self._nodes_equal(negated_consequent.right, implication.right):
             raise LogicRuleError("Negation must be of the consequent of the implication")
 
         negated_antecedent = Node(LogicSymbol.NOT.value)
-        negated_antecedent.left = implication.left
+        negated_antecedent.right = implication.left
         return negated_antecedent
 
 
