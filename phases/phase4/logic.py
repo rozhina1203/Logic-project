@@ -213,10 +213,10 @@ class DoubleNegIntro(LogicRule):
         original_node = self.nodes[0]
 
         inner_negation = Node(LogicSymbol.NOT.value)
-        inner_negation.left = original_node
+        inner_negation.right = original_node
 
         outer_negation = Node(LogicSymbol.NOT.value)
-        outer_negation.left = inner_negation
+        outer_negation.right = inner_negation
 
         return outer_negation
 
