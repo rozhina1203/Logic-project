@@ -167,15 +167,15 @@ class DoubleNegElim(LogicRule):
     def apply(self) -> Node:
         double_neg_node = self.nodes[0]
 
-        if double_neg_node.value != LogicSymbol.NOT.value or double_neg_node.left is None:
+        if double_neg_node.value != LogicSymbol.NOT.value or double_neg_node.right is None:
             raise LogicRuleError("Input must be a negation (¬) node")
 
-        inner_node = double_neg_node.left
+        inner_node = double_neg_node.right
 
-        if inner_node.value != LogicSymbol.NOT.value or inner_node.left is None:
+        if inner_node.value != LogicSymbol.NOT.value or inner_node.right is None:
             raise LogicRuleError("Input must be a double negation (¬¬A)")
 
-        return inner_node.left
+        return inner_node.right
 
 
 class ModusTollens(LogicRule):
