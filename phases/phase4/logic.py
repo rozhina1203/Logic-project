@@ -151,7 +151,7 @@ class NegElim(LogicRule):
         else:
             raise LogicRuleError("NegElim requires one positive and one negative node")
 
-        if negative_node.left is None or not self._nodes_equal(positive_node, negative_node.left):
+        if negative_node.right is None or not self._nodes_equal(positive_node, negative_node.right):
             raise LogicRuleError("Nodes must be A and ¬A")
 
         return Node(LogicSymbol.CONTRADICTION.value)
