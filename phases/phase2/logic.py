@@ -328,6 +328,9 @@ class Phase2(BasePhase):
         if node.value.isalpha():
             return node.value
 
+        if node.value == '⊥':
+            return node.value
+
         # If it's a unary operator (negation)
         if node.value == '¬':
             right_str = self.tree_to_string(node.right)
