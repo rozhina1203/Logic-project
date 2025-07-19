@@ -13,7 +13,7 @@ class LogicSymbol(Enum):
     IMPLIES = "→"
     NOT = "¬"
     CONTRADICTION = "⊥"
-
+    OR = "∨"
 
 @dataclass
 class LogicLine:
