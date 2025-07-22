@@ -106,6 +106,6 @@ class Phase3(BasePhase):
                 return "Unsatisfiable"  # The formula decided it just wasn't feeling it today.
 
         except ValueError as e:
-            return f"Invalid Horn Formula: {e}"
+            return f"Invalid Horn Formula"
         except Exception as e:
             return f"An unexpected error occurred during Horn solving: {e}"
