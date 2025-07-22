@@ -1,2 +1,10 @@
 Valid Formula
-Ha Ha
+¬
+  ∧
+    ∨
+      a
+      b
+    →
+      c
+      ¬
+        d

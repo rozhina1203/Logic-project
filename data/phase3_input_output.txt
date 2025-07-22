@@ -1,2 +1,2 @@
 Satisfiable
-[list of true variables]
+{'C', 'B', 'E', 'D', 'A'}
