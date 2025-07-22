@@ -122,15 +122,23 @@ class ImpElim(LogicRule):
             raise LogicRuleError("ImpElim requires exactly two nodes (A→B and A)")
 
     def apply(self) -> Node:
-        implication,antecedent = self.nodes
+        node1, node2 = self.nodes
 
-        if implication.value != LogicSymbol.IMPLIES.value or implication.left is None or implication.right is None:
-            raise LogicRuleError("First node must be an implication (→) with left and right children")
+        # Try both possible orders: (A→B, A) and (A, A→B)
 
-        if not self._nodes_equal(implication.left, antecedent):
-            raise LogicRuleError("Second node must match the antecedent of the implication")
+        # Case 1: First node is implication, second is antecedent
+        if (node1.value == LogicSymbol.IMPLIES.value and
+                node1.left is not None and node1.right is not None):
+            if self._nodes_equal(node1.left, node2):
+                return node1.right
 
-        return implication.right
+        # Case 2: Second node is implication, first is antecedent
+        if (node2.value == LogicSymbol.IMPLIES.value and
+                node2.left is not None and node2.right is not None):
+            if self._nodes_equal(node2.left, node1):
+                return node2.right
+
+        raise LogicRuleError("Must have an implication (A→B) and its antecedent (A)")
 
 
 class NegElim(LogicRule):
@@ -144,13 +152,29 @@ class NegElim(LogicRule):
         node1, node2 = self.nodes
 
         # Check if we have A and ¬A in either order
+        positive_node = None
+        negative_node = None
+
+        # Case 1: node1 is positive, node2 is negative
         if node1.value != LogicSymbol.NOT.value and node2.value == LogicSymbol.NOT.value:
             positive_node, negative_node = node1, node2
+        # Case 2: node1 is negative, node2 is positive
         elif node1.value == LogicSymbol.NOT.value and node2.value != LogicSymbol.NOT.value:
             negative_node, positive_node = node1, node2
+        # Case 3: Both are negations - check if one is the negation of the other
+        elif node1.value == LogicSymbol.NOT.value and node2.value == LogicSymbol.NOT.value:
+            # Check if node1.right equals node2 (i.e., node1 = ¬A, node2 = A)
+            if node1.right is not None and self._nodes_equal(node1.right, node2):
+                positive_node, negative_node = node2, node1
+            # Check if node2.right equals node1 (i.e., node2 = ¬A, node1 = A)
+            elif node2.right is not None and self._nodes_equal(node2.right, node1):
+                positive_node, negative_node = node1, node2
+            else:
+                raise LogicRuleError("NegElim requires one positive and one negative node")
         else:
             raise LogicRuleError("NegElim requires one positive and one negative node")
 
+        # Verify we have the correct A and ¬A pattern
         if negative_node.right is None or not self._nodes_equal(positive_node, negative_node.right):
             raise LogicRuleError("Nodes must be A and ¬A")
 
