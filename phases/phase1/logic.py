@@ -149,7 +149,7 @@ class Phase1(BasePhase):
                 while (operators and operators[-1] != '(' and self.presedence(operators[-1]) <= self.presedence(t)):
                     pop_op()
                 operators.append(t)
-            elif t.isalpha():
+            elif t.isalpha() or t == '⊥':
                 proposition.append(Node(t))
             else:
                 pass
@@ -176,8 +176,14 @@ class Phase1(BasePhase):
 
     def process(self, input_data: str) -> str:
         if self.is_valid(input_data):
-            parsetree = self.parse_tree(input_data)
-            result_content = self.preorder(parsetree)
-            return "Valid Formula\n" + result_content
+            result_tree = self.parse_tree(input_data)
+            result_content = self.preorder(result_tree)
+            return "Valid Formula\n" + self.sanitize_output(result_content)
         else:
             return "Invalid Formula"
+
+    @staticmethod
+    def sanitize_output(output: str) -> str:
+        cleaned_lines = [line.strip("\\") for line in output.splitlines()]
+        sanitized = "\n".join(cleaned_lines).strip()
+        return sanitized
