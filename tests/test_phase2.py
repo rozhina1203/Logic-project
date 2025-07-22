@@ -212,3 +212,23 @@ def test_cnf_complex_structures(expr):
     # Result should not contain → or ↔ symbols (fully converted)
     assert "→" not in result
     assert "↔" not in result
+
+def test_implies_to_or_simple(phase2):
+    expr = "p → q"
+    expected_output = "¬p ∨ q"
+    assert phase2.process(expr) == expected_output
+
+def test_implies_with_and(phase2):
+    expr = "(q → r) ∧ p"
+    expected_output = "(¬q ∨ r) ∧ p"
+    assert phase2.process(expr) == expected_output
+
+def test_nested_implies_or_not(phase2):
+    expr = "(p → (¬((¬r) ∧ q))) ∨ s"
+    expected_output = "¬p ∨ r ∨ ¬q ∨ s"
+    assert phase2.process(expr) == expected_output
+
+def test_double_nested_implies(phase2):
+    expr = "p → ((q → r) → s)"
+    expected_output = "(¬p ∨ q ∨ s) ∧ (¬p ∨ ¬r ∨ s)"
+    assert phase2.process(expr) == expected_output

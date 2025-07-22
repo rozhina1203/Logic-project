@@ -1,9 +1,11 @@
 import re
 from phases.phase3.main import Phase3
 import pytest
+import ast
 
-solver = Phase3()
-
+@pytest.fixture
+def phase3():
+    return Phase3()
 
 def parse_output(output: str):
     lines = output.strip().split('\n')
@@ -82,17 +84,17 @@ def parse_output(output: str):
     ("(⊤→A)∧(A→B)∧(A→C)∧(B∧C→D)∧(D→E)∧(E→F)∧(F∧B→G)∧(G∧C→H)∧(H∧D→I)∧(I∧E→J)∧(J→K)∧(K∧A→L)",
      "Satisfiable", {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'}),
 ])
-def test_horn_solver_valid(input_data, expected_status, expected_vars):
-    output = solver.process(input_data)
+def test_horn_solver_valid(phase3, input_data, expected_status, expected_vars):
+    output = phase3.process(input_data)
     status, variables = parse_output(output)
     assert status == expected_status
     if expected_status == "Satisfiable":
         assert variables == expected_vars
 
 
-def test_horn_solver_invalid():
+def test_horn_solver_invalid(phase3):
     invalid_input = "(⊤→A)∧(A⇒B)"
-    output = solver.process(invalid_input)
+    output = phase3.process(invalid_input)
     assert "Invalid Horn Formula" in output
 
 
@@ -107,7 +109,65 @@ def test_horn_solver_invalid():
 
     ("(⊤→A)∧(A→B)∧(A→B)∧(B→C)∧(B→C)∧(C→D)∧(D→E)∧(E→F)", "Satisfiable"),
 ])
-def test_horn_solver_edge_cases(input_data, expected_status):
-    output = solver.process(input_data)
+def test_horn_solver_edge_cases(phase3, input_data, expected_status):
+    output = phase3.process(input_data)
     status, _ = parse_output(output)
     assert status == expected_status
+
+
+def test_satisfiable_no_assignment(phase3):
+    expr = "(p ∧ q ∧ s → p) ∧ (q ∧ r → p) ∧ (p ∧ s → s)"
+    expected_output = "Satisfiable"
+    assert phase3.process(expr) == expected_output
+
+
+def test_satisfiable_with_assignment(phase3):
+    expr = "(p ∧ q ∧ s → ⊥) ∧ (q ∧ r → p) ∧ (⊤ → s)"
+    expected_output = "Satisfiable\n{'s'}"
+    assert phase3.process(expr) == expected_output
+
+
+def test_unsatisfiable_top_to_bottom(phase3):
+    expr = "⊤ → ⊥"
+    expected_output = "Unsatisfiable"
+    assert phase3.process(expr) == expected_output
+
+
+def test_invalid_horn_formula_disjunction(phase3):
+    expr = "q ∨ r → p"
+    expected_output = "Invalid Horn Formula"
+    assert phase3.process(expr) == expected_output
+
+
+def test_unsatisfiable_multiple_clauses(phase3):
+    expr = "(p ∧ q ∧ s → ⊥) ∧ (s → p) ∧ (s → q) ∧ (⊤ → s)"
+    expected_output = "Unsatisfiable"
+    assert phase3.process(expr) == expected_output
+
+def test_satisfiable_with_multiple_assignments_subset_check(phase3):
+    expr = "(s → p) ∧ (p ∧ q ∧ s → p) ∧ (⊤ → r) ∧ (s ∧ p → q) ∧ (⊤ → s)"
+    output = phase3.process(expr)
+
+    assert output.startswith("Satisfiable")
+
+    lines = output.splitlines()
+    if len(lines) == 1:
+        result_set = set()
+    else:
+        try:
+            result_set = ast.literal_eval(lines[1])
+            assert isinstance(result_set, set)
+        except (SyntaxError, ValueError):
+            pytest.fail("Output format is not a valid set.")
+
+    full_set = {"p", "q", "r", "s"}
+
+    assert result_set == full_set
+
+
+
+
+def test_invalid_horn_formula_with_negation(phase3):
+    expr = "(¬s → p) ∧ (p ∧ q ∧ s → p) ∧ (⊤ → r) ∧ (s ∧ p → q) ∧ (⊤ → s)"
+    expected_output = "Invalid Horn Formula"
+    assert phase3.process(expr) == expected_output
