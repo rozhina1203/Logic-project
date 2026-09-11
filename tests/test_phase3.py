@@ -1,5 +1,5 @@
 import re
-from phases.phase3.main import Phase3
+from phases.phase3.logic import Phase3
 import pytest
 import ast
 
@@ -14,7 +14,7 @@ def parse_output(output: str):
     if len(lines) > 1:
         variables_str = re.findall(r"\{.*\}", lines[1])
         if variables_str:
-            variables = set(eval(variables_str[0]))
+            variables = set(ast.literal_eval(variables_str[0]))
     return status, variables
 
 
@@ -170,4 +170,16 @@ def test_satisfiable_with_multiple_assignments_subset_check(phase3):
 def test_invalid_horn_formula_with_negation(phase3):
     expr = "(¬s → p) ∧ (p ∧ q ∧ s → p) ∧ (⊤ → r) ∧ (s ∧ p → q) ∧ (⊤ → s)"
     expected_output = "Invalid Horn Formula"
+    assert phase3.process(expr) == expected_output
+
+
+def test_top_is_not_listed_as_true_variable(phase3):
+    expr = "(⊤ → A) ∧ (A → ⊤)"
+    expected_output = "Satisfiable\n{'A'}"
+    assert phase3.process(expr) == expected_output
+
+
+def test_true_variables_are_sorted(phase3):
+    expr = "(⊤ → c) ∧ (⊤ → a) ∧ (a ∧ c → b)"
+    expected_output = "Satisfiable\n{'a', 'b', 'c'}"
     assert phase3.process(expr) == expected_output

@@ -5,7 +5,7 @@ if __name__ == "__main__":
     import sys
 
     # For independent execution, allow user to specify input file
-    # Example usage: python phases/phase2/main.py path/to/your/input.txt
+    # Example usage (from the project root): python -m phases.phase2.main path/to/your/input.txt
     if len(sys.argv) > 1:
         input_file_path = sys.argv[1]
     else:

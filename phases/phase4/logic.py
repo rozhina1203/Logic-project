@@ -337,19 +337,20 @@ class Phase4(BasePhase):
             # Get the formulas for the specified line numbers
             formulas = self._get_formulas_for_lines(logic_lines, line_numbers)
 
-            # Apply the rle
+            # Apply the rule
             rule = rule_class(formulas, rule_name)
             result = rule.apply()
 
-            # Convert resultback to string
+            # Convert result back to string
             return self.phase2.tree_to_string(result)
 
-        except (ValueError, LogicRuleError, Exception):
+        except Exception:
+            # Parsing errors, missing lines and LogicRuleErrors all mean the rule can't be applied
             return self.RULE_CANNOT_BE_APPLIED
 
     @staticmethod
     def _get_formulas_for_lines(logic_lines: List[LogicLine], line_numbers: List[int]) -> List[Node]:
-        """Extract formulas for the specifed line numbers"""
+        """Extract formulas for the specified line numbers"""
         line_map = {line.line_number: line.formula for line in logic_lines}
 
         formulas = []

@@ -1,17 +1,9 @@
 import pytest
-from phases.phase4.logic import Phase4, LogicLine, LogicRuleError
-from phases.phase1.logic import Node
+from phases.phase4.logic import Phase4
 
 @pytest.fixture
 def phase4():
     return Phase4()
-
-def create_node(value: str, left=None, right=None) -> Node:
-    """Helper to create Node objects"""
-    node = Node(value)
-    node.left = left
-    node.right = right
-    return node
 
 def test_and_intro_success(phase4):
     """Test successful AND introduction"""
@@ -371,4 +363,14 @@ def test_modus_tollens_deep(phase4):
 def test_double_negation_intro(phase4):
     expr = "1    ¬(¬(¬(p → r)))\n¬¬i, 1"
     expected_output = "¬¬¬¬¬(p → r)"
+    assert phase4.process(expr) == expected_output
+
+def test_contradiction_is_printed_without_parentheses(phase4):
+    expr = "1    ⊥\n2    p\n∧i, 1, 2"
+    expected_output = "⊥ ∧ p"
+    assert phase4.process(expr) == expected_output
+
+def test_double_negation_without_parentheses_in_input(phase4):
+    expr = "1    ¬¬(p → r)\n¬¬e, 1"
+    expected_output = "p → r"
     assert phase4.process(expr) == expected_output

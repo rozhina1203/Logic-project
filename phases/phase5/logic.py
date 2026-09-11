@@ -1,16 +1,16 @@
-from typing import List, Optional, Dict, Type, Union, Tuple
+from typing import List, Optional, Type, Union, Tuple
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from phases.base_phase import BasePhase
 from phases.phase1.logic import Node, Phase1
 from phases.phase4.logic import LogicRuleError, LogicSymbol, AndIntro, AndElimRight, AndElimLeft, ImpElim, NegElim, \
-    DoubleNegElim, ModusTollens, DoubleNegIntro, Phase4
+    DoubleNegElim, ModusTollens, DoubleNegIntro
 
 
 @dataclass
 class LogicLine:
-    line_number: Optional[int]  # none for beginscope/endscope
+    line_number: Optional[int]  # None for BeginScope/EndScope lines
     formula: Optional[Node]
     rule_name: Optional[str]
     refs: List[Union[int, Tuple[int, int]]]
@@ -18,7 +18,10 @@ class LogicLine:
 
 
 class LogicRule(ABC):
-    """Abstract base class for all logic rules"""
+    """
+    Abstract base class for the rules added in Phase 5.
+    Unlike the Phase 4 base class, node equality here treats ∧ and ∨ as commutative.
+    """
 
     def __init__(self, nodes: List[Node], rule_name: str = None):
         self.rule_name = rule_name
@@ -96,7 +99,7 @@ class OrIntroRight(LogicRule):
             raise LogicRuleError("Premise must match right disjunct of target")
 
 class OrElim(LogicRule):
-    """∨e: from A ∨ B, A ⊢ C and B ⊢ c derive C."""
+    """∨e: From A ∨ B, A ⊢ C and B ⊢ C, derive C."""
 
     def _validate_input(self):
         if len(self.nodes) != 3:
@@ -202,7 +205,7 @@ class CopyRule(LogicRule):
 
     def _validate_input(self):
         if len(self.nodes) != 1:
-            raise ValueError("Copy rule requires exactly one input!")
+            raise LogicRuleError("Copy rule requires exactly one input!")
 
     def apply(self) -> Node:
         return self.nodes[0]
@@ -300,35 +303,31 @@ def rule_name_to_class(name: str) -> Optional[Type[LogicRule]]:
 
 class Phase5(BasePhase):
     """
-    In this phase, the program reads all lines of a full logic proof.
-    It checks that each line follows the rules.
-    If everything is oky, it prints: "Valid Deduction".
-    If there is amistake, it prints: "Invalid Deduction at Line X".
+    Phase 5: Natural Deduction Proof Verification
+
+    Reads a complete natural deduction proof and checks that every line follows
+    from the rule it cites. Returns "Valid Deduction" if all lines are correct,
+    or "Invalid Deduction at Line X" for the first line that is not.
 
     Input:
-        - Many lines. Each line has:
-            - Line number (except scope lines)
-            - A formula
-            - A rule and used lines
-        - Scope starts and ends with:
-            - BeginScope
-            - EndScope
-        - Scope is shown using 2 spaces each level
-
-    What needs to be done:
-        - Read lines and formulas
-        - Keep track of scopes and assumptins
-        - Check each rule and if it uses correct lines
-        - Return result
+        - One proof step per line: line number, formula, and the rule with the
+          lines it uses, e.g. "3    p ∧ q        ∧i, 1, 2"
+        - A box (sub-proof) starts with BeginScope and ends with EndScope
+        - Each scope level is indented by 2 more spaces
+        - Once a scope is closed, its lines can only be referenced as a whole
+          box (e.g. "→i, 3-5"), not one by one
     """
 
     def process(self, input_data: str) -> str:
         """
-        Do the main job for this phase.
-        Check every line and rule in the proof.
+        Checks every line of the proof against the rule it cites.
 
-        input_data: all the proof text
-        return: "Valid Deduction" or "Invalid Deduction at Line X"
+        Args:
+            input_data (str): The full proof text.
+
+        Returns:
+            str: "Valid Deduction", "Invalid Deduction at Line X",
+                 or an error message if the input cannot be parsed.
         """
         parser = NaturalDeductionParser()
         try:
@@ -337,205 +336,133 @@ class Phase5(BasePhase):
             return f"Invalid input format: {e}"
 
         line_map = {line.line_number: line for line in lines if line.line_number is not None}
-        valid_lines = set()
-        scope_stack = [set()]
-        scope_assumptions = {}
 
+        # Every line checked so far, including the lines of scopes that are already closed
+        valid_lines = set()
+        # One set of line numbers per open scope. A single line can only be referenced
+        # while the scope it belongs to is still open.
+        scope_stack = [set()]
+
+        # Premises are available everywhere in the proof
         for num, line in line_map.items():
             if line.rule_name == "Premise":
                 valid_lines.add(num)
                 scope_stack[0].add(num)
 
-        current_scope_level = 0
+        def is_accessible(ref) -> bool:
+            return isinstance(ref, int) and any(ref in scope for scope in scope_stack)
 
         for line in lines:
             if line.line_number is None:
                 if line.rule_name == "BeginScope":
-                    current_scope_level += 1
                     scope_stack.append(set())
                 elif line.rule_name == "EndScope":
                     if len(scope_stack) <= 1:
                         return "Invalid Deduction: unmatched EndScope"
-                    ended_scope = scope_stack.pop()
-                    current_scope_level -= 1
+                    scope_stack.pop()
                 continue
 
-            if line.rule_name in ["Premise", "Assumption"]:
-                if line.rule_name == "Assumption":
-                    scope_stack[-1].add(line.line_number)
-                    valid_lines.add(line.line_number)
-                    scope_assumptions[current_scope_level] = line.line_number
+            if line.rule_name == "Premise":
                 continue
+
+            if line.rule_name == "Assumption":
+                scope_stack[-1].add(line.line_number)
+                valid_lines.add(line.line_number)
+                continue
+
+            invalid = f"Invalid Deduction at Line {line.line_number}"
 
             rule_class = rule_name_to_class(line.rule_name)
             if not rule_class:
-                return f"Invalid Deduction at Line {line.line_number}"
+                return invalid
 
             try:
-                if line.rule_name in ["Premise", "Assumption"]:
-                    continue
-                elif line.rule_name == "LEM":
+                # LEM - Law of Excluded Middle (uses no other lines)
+                if line.rule_name == "LEM":
                     if len(line.refs) != 0:
-                        return f"Invalid Deduction at Line {line.line_number}"
+                        return invalid
 
                     expected_formula = line.formula
                     if expected_formula.value != LogicSymbol.OR.value:
-                        return f"Invalid Deduction at Line {line.line_number}"
+                        return invalid
 
-                    # check if it's A ∨ ¬A format
+                    # Format: A ∨ ¬A
                     if (expected_formula.right is not None and
                             expected_formula.right.value == LogicSymbol.NOT.value and
                             expected_formula.right.right is not None and
                             self.nodes_equal(expected_formula.left, expected_formula.right.right)):
-                        # Format: A ∨ ¬A
                         proposition = expected_formula.left
-                        rule = rule_class(nodes=[proposition], rule_name=line.rule_name)
-                    # Check if it's ¬A ∨ A format
+                    # Format: ¬A ∨ A
                     elif (expected_formula.left is not None and
                           expected_formula.left.value == LogicSymbol.NOT.value and
                           expected_formula.left.right is not None and
                           self.nodes_equal(expected_formula.left.right, expected_formula.right)):
-                        # Format: ¬A ∨ A
                         proposition = expected_formula.right
-                        rule = rule_class(nodes=[proposition], rule_name=line.rule_name)
                     else:
-                        return f"Invalid Deduction at Line {line.line_number}"
-                # 2. →i - Implication Introduction
-                elif line.rule_name == "→i":
+                        return invalid
+
+                    rule = rule_class(nodes=[proposition], rule_name=line.rule_name)
+
+                # →i, ¬i, PBC - discharge a box "start-end" that begins with an assumption
+                elif line.rule_name in ("→i", "¬i", "PBC"):
                     if len(line.refs) != 1 or not isinstance(line.refs[0], tuple):
-                        return f"Invalid Deduction at Line {line.line_number}"
+                        return invalid
 
                     start, end = line.refs[0]
                     if start not in line_map or end not in line_map:
-                        return f"Invalid Deduction at Line {line.line_number}"
+                        return invalid
 
                     if line_map[start].rule_name != "Assumption":
-                        return f"Invalid Deduction at Line {line.line_number}"
+                        return invalid
 
-                    for i in range(start, end + 1):
-                        if i not in valid_lines:
-                            return f"Invalid Deduction at Line {line.line_number}"
+                    if any(i not in valid_lines for i in range(start, end + 1)):
+                        return invalid
 
                     assumption_node = line_map[start].formula
                     conclusion_node = line_map[end].formula
                     rule = rule_class(nodes=[assumption_node, conclusion_node], rule_name=line.rule_name)
 
-                # 3. ¬i - Negation Introduction
-                elif line.rule_name == "¬i":
-                    if len(line.refs) != 1 or not isinstance(line.refs[0], tuple):
-                        return f"Invalid Deduction at Line {line.line_number}"
+                # ⊥e, ∨i1, ∨i2 - one referenced line. The formula on this line is passed in too,
+                # because it cannot be built from the referenced line alone.
+                elif line.rule_name in ("⊥e", "∨i1", "∨i2"):
+                    if len(line.refs) != 1 or not is_accessible(line.refs[0]):
+                        return invalid
 
-                    start, end = line.refs[0]
-                    if start not in line_map or line_map[start].rule_name != "Assumption":
-                        return f"Invalid Deduction at Line {line.line_number}"
+                    premise_node = line_map[line.refs[0]].formula
+                    rule = rule_class(nodes=[premise_node, line.formula], rule_name=line.rule_name)
 
-                    if end not in line_map:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    assumption_node = line_map[start].formula
-                    contradiction_node = line_map[end].formula
-                    rule = rule_class(nodes=[assumption_node, contradiction_node], rule_name=line.rule_name)
-
-                # 4. PBC - Proof by Contradiction
-                elif line.rule_name == "PBC":
-                    if len(line.refs) != 1 or not isinstance(line.refs[0], tuple):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    start, end = line.refs[0]
-                    if start not in line_map or line_map[start].rule_name != "Assumption":
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    if end not in line_map:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    assumption_node = line_map[start].formula  # ¬A
-                    contradiction_node = line_map[end].formula  # ⊥
-                    rule = rule_class(nodes=[assumption_node, contradiction_node], rule_name=line.rule_name)
-
-                # 5. ⊥e - False Elimination (Ex Falso Quodlibet)
-                elif line.rule_name == "⊥e":
-                    if len(line.refs) != 1:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    contradiction_ref = line.refs[0]
-                    if isinstance(contradiction_ref, int):
-                        if contradiction_ref not in valid_lines:
-                            return f"Invalid Deduction at Line {line.line_number}"
-                        contradiction_node = line_map[contradiction_ref].formula
-                    else:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    target_node = line.formula
-                    rule = rule_class(nodes=[contradiction_node, target_node], rule_name=line.rule_name)
-
-                # 6. ∨i1 - Or Introduction Left
-                elif line.rule_name == "∨i1":
-                    if len(line.refs) != 1 or not isinstance(line.refs[0], int):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    premise_ref = line.refs[0]
-                    if premise_ref not in valid_lines:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    premise_node = line_map[premise_ref].formula
-                    target_node = line.formula
-                    rule = rule_class(nodes=[premise_node, target_node], rule_name=line.rule_name)
-
-                # 7. ∨i2 - Or Introduction Right
-                elif line.rule_name == "∨i2":
-                    if len(line.refs) != 1 or not isinstance(line.refs[0], int):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    premise_ref = line.refs[0]
-                    if premise_ref not in valid_lines:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    premise_node = line_map[premise_ref].formula
-                    target_node = line.formula
-                    rule = rule_class(nodes=[premise_node, target_node], rule_name=line.rule_name)
-
-                # 8. ∨e - Or Elimination
+                # ∨e - Or Elimination: "∨e, disjunction, box1, box2"
                 elif line.rule_name == "∨e":
                     if len(line.refs) != 3:
-                        return f"Invalid Deduction at Line {line.line_number}"
+                        return invalid
 
-                    start1, end1 = line.refs[1]
-                    start2, end2 = line.refs[2]
+                    disjunction_ref, box1, box2 = line.refs
+                    if not is_accessible(disjunction_ref):
+                        return invalid
+
+                    if not isinstance(box1, tuple) or not isinstance(box2, tuple):
+                        return invalid
+
+                    start1, end1 = box1
+                    start2, end2 = box2
 
                     if not (start1 < end1 < start2 < end2 < line.line_number):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    disjunction_ref = line.refs[0]
-                    if isinstance(disjunction_ref, int):
-                        if disjunction_ref not in valid_lines:
-                            return f"Invalid Deduction at Line {line.line_number}"
-                        disjunction_node = line_map[disjunction_ref].formula
-                    else:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    if (not isinstance(line.refs[1], tuple) or
-                            not isinstance(line.refs[2], tuple)):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    start1, end1 = line.refs[1]
-                    start2, end2 = line.refs[2]
+                        return invalid
 
                     if (start1 not in line_map or end1 not in line_map or
                             start2 not in line_map or end2 not in line_map):
-                        return f"Invalid Deduction at Line {line.line_number}"
+                        return invalid
 
                     if (line_map[start1].rule_name != "Assumption" or
                             line_map[start2].rule_name != "Assumption"):
-                        return f"Invalid Deduction at Line {line.line_number}"
+                        return invalid
+
+                    disjunction_node = line_map[disjunction_ref].formula
+                    if disjunction_node.value != LogicSymbol.OR.value:
+                        return invalid
 
                     assumption1 = line_map[start1].formula
                     assumption2 = line_map[start2].formula
-                    conclusion1 = line_map[end1].formula
-                    conclusion2 = line_map[end2].formula
-
-                    if disjunction_node.value != LogicSymbol.OR.value:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
                     left_disjunct = disjunction_node.left
                     right_disjunct = disjunction_node.right
 
@@ -543,146 +470,45 @@ class Phase5(BasePhase):
                              self.nodes_equal(assumption2, right_disjunct)) or
                             (self.nodes_equal(assumption1, right_disjunct) and
                              self.nodes_equal(assumption2, left_disjunct))):
-                        return f"Invalid Deduction at Line {line.line_number}"
+                        return invalid
 
-                    assumption1_indent = line_map[start1].indent
-                    assumption2_indent = line_map[start2].indent
+                    if line_map[start2].indent > line_map[start1].indent:
+                        return invalid
 
-                    if assumption2_indent > assumption1_indent:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
+                    conclusion1 = line_map[end1].formula
+                    conclusion2 = line_map[end2].formula
                     rule = rule_class(nodes=[disjunction_node, conclusion1, conclusion2], rule_name=line.rule_name)
-                # 9. ∧i - And Introduction
-                elif line.rule_name == "∧i":
-                    if len(line.refs) != 2:
-                        return f"Invalid Deduction at Line {line.line_number}"
 
-                    input_nodes = []
-                    for ref in line.refs:
-                        if isinstance(ref, int) and ref in valid_lines:
-                            input_nodes.append(line_map[ref].formula)
-                        else:
-                            return f"Invalid Deduction at Line {line.line_number}"
+                # ∧e1, ∧e2, ¬¬e, ¬¬i, Copy - one referenced line
+                elif line.rule_name in ("∧e1", "∧e2", "¬¬e", "¬¬i", "Copy"):
+                    if len(line.refs) != 1 or not is_accessible(line.refs[0]):
+                        return invalid
 
+                    input_node = line_map[line.refs[0]].formula
+                    rule = rule_class(nodes=[input_node], rule_name=line.rule_name)
+
+                # ∧i, →e, ¬e, MT - two referenced lines
+                elif line.rule_name in ("∧i", "→e", "¬e", "MT"):
+                    if len(line.refs) != 2 or not all(is_accessible(ref) for ref in line.refs):
+                        return invalid
+
+                    input_nodes = [line_map[ref].formula for ref in line.refs]
                     rule = rule_class(nodes=input_nodes, rule_name=line.rule_name)
-
-                # 10. ∧e1 - And Elimination Left
-                elif line.rule_name == "∧e1":
-                    if len(line.refs) != 1 or not isinstance(line.refs[0], int):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    ref = line.refs[0]
-                    if ref not in valid_lines:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    input_node = line_map[ref].formula
-                    rule = rule_class(nodes=[input_node], rule_name=line.rule_name)
-
-                # 11. ∧e2 - And Elimination Right
-                elif line.rule_name == "∧e2":
-                    if len(line.refs) != 1 or not isinstance(line.refs[0], int):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    ref = line.refs[0]
-                    if ref not in valid_lines:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    input_node = line_map[ref].formula
-                    rule = rule_class(nodes=[input_node], rule_name=line.rule_name)
-
-                # 12. →e - Implication Elimination (Modus Ponens)
-                elif line.rule_name == "→e":
-                    if len(line.refs) != 2:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    input_nodes = []
-                    for ref in line.refs:
-                        if isinstance(ref, int) and ref in valid_lines:
-                            input_nodes.append(line_map[ref].formula)
-                        else:
-                            return f"Invalid Deduction at Line {line.line_number}"
-
-                    rule = rule_class(nodes=input_nodes, rule_name=line.rule_name)
-
-                # 13. ¬e - Negation Elimination
-                elif line.rule_name == "¬e":
-                    if len(line.refs) != 2:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    input_nodes = []
-                    for ref in line.refs:
-                        if isinstance(ref, int) and ref in valid_lines:
-                            input_nodes.append(line_map[ref].formula)
-                        else:
-                            return f"Invalid Deduction at Line {line.line_number}"
-
-                    rule = rule_class(nodes=input_nodes, rule_name=line.rule_name)
-
-                # 14. ¬¬e - Double Negation Elimination
-                elif line.rule_name == "¬¬e":
-                    if len(line.refs) != 1 or not isinstance(line.refs[0], int):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    ref = line.refs[0]
-                    if ref not in valid_lines:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    input_node = line_map[ref].formula
-                    rule = rule_class(nodes=[input_node], rule_name=line.rule_name)
-
-                # 15. ¬¬i - Double Negation Introduction
-                elif line.rule_name == "¬¬i":
-                    if len(line.refs) != 1 or not isinstance(line.refs[0], int):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    ref = line.refs[0]
-                    if ref not in valid_lines:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    input_node = line_map[ref].formula
-                    rule = rule_class(nodes=[input_node], rule_name=line.rule_name)
-
-                # 16. MT - Modus Tollens
-                elif line.rule_name == "MT":
-                    if len(line.refs) != 2:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    input_nodes = []
-                    for ref in line.refs:
-                        if isinstance(ref, int) and ref in valid_lines:
-                            input_nodes.append(line_map[ref].formula)
-                        else:
-                            return f"Invalid Deduction at Line {line.line_number}"
-
-                    rule = rule_class(nodes=input_nodes, rule_name=line.rule_name)
-
-                # 17. Copy - Copy Rule
-                elif line.rule_name == "Copy":
-                    if len(line.refs) != 1 or not isinstance(line.refs[0], int):
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    ref = line.refs[0]
-                    if ref not in valid_lines:
-                        return f"Invalid Deduction at Line {line.line_number}"
-
-                    input_node = line_map[ref].formula
-                    rule = rule_class(nodes=[input_node], rule_name=line.rule_name)
 
                 # Unknown rule
                 else:
-                    return f"Invalid Deduction at Line {line.line_number}"
+                    return invalid
+
                 expected_node = rule.apply()
 
                 if not rule._nodes_equal(expected_node, line.formula):
-                    return f"Invalid Deduction at Line {line.line_number}"
+                    return invalid
 
                 scope_stack[-1].add(line.line_number)
                 valid_lines.add(line.line_number)
 
-            except LogicRuleError as e:
-                return f"Invalid Deduction at Line {line.line_number}"
-            except Exception as e:
-                return f"Invalid Deduction at Line {line.line_number}"
+            except Exception:
+                return invalid
 
         return "Valid Deduction"
 

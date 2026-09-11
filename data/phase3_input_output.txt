@@ -1,2 +1,2 @@
 Satisfiable
-{'C', 'B', 'E', 'D', 'A'}
+{'A', 'B', 'C', 'D', 'E'}

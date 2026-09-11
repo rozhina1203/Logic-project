@@ -1,9 +1,15 @@
-# phases/phase1/main.py
+# phases/phase1/logic.py
 
 from ..base_phase import BasePhase
 
 
 class Node:
+    """
+    A node of a formula parse tree (used by all phases).
+    Binary operators use both children. The unary '¬' stores its operand in `right`
+    and leaves `left` as None. Propositions and '⊥' are leaves.
+    """
+
     def __init__(self, val):
         self.value = val
         self.left = None
@@ -15,14 +21,15 @@ class Phase1(BasePhase):
     Implements Phase 1: Well-Formed Formula (WFF) validation and Parse Tree generation.
     """
 
-    """state "S" defines start
-    state "N" defines negative "¬"
-    state "P" defines proposition 
-    state "O" defines operators
-    state "L" defines left parenthese
-    state "R" defines right parenthese"""
-
     def is_valid(self, expr) -> bool:
+        # A small state machine over the tokens, plus a stack to check that parentheses are balanced.
+        # States:
+        #   S: start
+        #   N: after a negation '¬'
+        #   P: after a proposition
+        #   O: after a binary operator
+        #   L: after a left parenthesis
+        #   R: after a right parenthesis
         state = 'S'
         fstack = list()
         tokens = self.tokenize(expr)
@@ -105,7 +112,7 @@ class Phase1(BasePhase):
     def is_operator(self, c):
         return c in ['¬', '∧', '∨', '→', '↔']
 
-    def presedence(self, op):
+    def precedence(self, op):
         if op == '¬':
             return 1
         if op == '∧':
@@ -146,13 +153,15 @@ class Phase1(BasePhase):
                     pop_op()
                 operators.pop()
             elif self.is_operator(t):
-                while (operators and operators[-1] != '(' and self.presedence(operators[-1]) <= self.presedence(t)):
-                    pop_op()
+                # '¬' is a prefix operator: its operand has not been read yet, so nothing can be
+                # reduced before it. A binary operator first reduces everything on the stack that
+                # binds at least as tightly (so equal-precedence operators group left to right).
+                if t != '¬':
+                    while (operators and operators[-1] != '(' and self.precedence(operators[-1]) <= self.precedence(t)):
+                        pop_op()
                 operators.append(t)
             elif t.isalpha() or t == '⊥':
                 proposition.append(Node(t))
-            else:
-                pass
 
         while operators:
             pop_op()

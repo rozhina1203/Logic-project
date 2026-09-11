@@ -125,3 +125,21 @@ def test_invalid_formula_unexpected_operator(phase1):
     expr = "¬ ∧ q"
     expected_output = "Invalid Formula"
     assert phase1.process(expr) == expected_output
+
+def test_valid_double_negation_without_parentheses(phase1):
+    expr = "¬¬a"
+    expected_output = "Valid Formula\n" \
+                      "¬\n" \
+                      "  ¬\n" \
+                      "    a"
+    assert phase1.process(expr) == expected_output
+
+def test_double_negation_after_binary_operator(phase1):
+    expr = "a ∧ ¬¬b"
+    expected_output = "Valid Formula\n" \
+                      "∧\n" \
+                      "  a\n" \
+                      "  ¬\n" \
+                      "    ¬\n" \
+                      "      b"
+    assert phase1.process(expr) == expected_output

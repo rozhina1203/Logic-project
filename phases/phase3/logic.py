@@ -1,4 +1,4 @@
-# phases/phase3/main.py
+# phases/phase3/logic.py
 
 from ..base_phase import BasePhase
 
@@ -14,26 +14,25 @@ class Phase3(BasePhase):
         """
         Processes the input Horn formula to determine its satisfiability.
 
+        The formula must be a conjunction of implications, e.g. (⊤ → A) ∧ (A ∧ B → C) ∧ (C → ⊥),
+        where each antecedent is a conjunction of variables, ⊤ or ⊥, and each consequent is
+        a single variable, ⊤ or ⊥.
+
         Args:
             input_data (str): The Horn propositional logic formula as a string.
 
         Returns:
-            str: "Satisfiable\n[list of true variables]" or "Unsatisfiable" or "Invalid Horn Formula".
+            str: "Satisfiable\n{set of true variables}" or "Unsatisfiable" or "Invalid Horn Formula".
         """
-        print("Initiating Horn SAT Protocol...")
-
-        # --- TEAMMATE: Your actual Phase 3 logic goes here ---
         try:
-            is_satisfiable, assignment_or_message = True, "[list of true variables]"
-
             input_data = input_data.replace(' ','')
             current = ''
             open_parens = 0
             n = len(input_data)
             clauses_list = []
             clauses = []
-            variables = set()
             i = 0
+            # Split the formula into clauses at every '∧' that is outside parentheses
             while i < n:
                 c = input_data[i]
                 current += c
@@ -42,7 +41,7 @@ class Phase3(BasePhase):
                     open_parens += 1
                 elif c == ')':
                     open_parens -= 1
-                
+
                 if open_parens == 0 and ((i+1 < n and input_data[i+1] == '∧') or i+1 == n):
                     clauses_list.append(current.strip('()'))
                     current = ''
@@ -52,32 +51,28 @@ class Phase3(BasePhase):
             for clause in clauses_list:
                 if '∧' not in clause and '→' not in clause:
                     raise ValueError
-                
+
                 parts = clause.split('→')
 
                 if len(parts) != 2:
                     raise ValueError
-                
+
                 consequent = parts[1]
                 antecedents = parts[0].split('∧')
                 antecedents = [a for a in antecedents if a != '⊤']
-                
 
                 for a in antecedents:
                     if a != '⊥' and not a.isalpha():
                         raise ValueError
-                    
-                    if a not in ['⊤', '⊥']:
-                        variables.add(a)
-                
+
                 if consequent != '⊥' and consequent != '⊤' and not consequent.isalpha():
                     raise ValueError
-                if consequent not in ['⊤', '⊥']:
-                    variables.add(consequent)
-                
+
                 clauses.append((antecedents, consequent))
 
-            #forward chaining algorithm
+            # Forward chaining: repeatedly mark a clause's consequent as true once all of its
+            # antecedents are true. If ⊥ becomes true, the formula is unsatisfiable.
+            is_satisfiable = True
             true_vars = set()
             changed = True
 
@@ -89,23 +84,20 @@ class Phase3(BasePhase):
                     if all(a in true_vars or a == '⊤' for a in antecedents):
                         if consequent == '⊥':
                             is_satisfiable = False
-                        if consequent not in true_vars:
-                            true_vars.add(consequent)
-                            changed = True
+                        true_vars.add(consequent)
+                        changed = True
 
-            assignment_or_message = true_vars
-            
-            if is_satisfiable:
-                if assignment_or_message:
-                    # If satisfiable and there's an assignment, print it nicely.
-                    # Otherwise, just "Satisfiable" if no variables became true.
-                    return f"Satisfiable\n{assignment_or_message}"
-                else:
-                    return "Satisfiable"  # Horn formula satisfiable with no true variables
-            else:
-                return "Unsatisfiable"  # The formula decided it just wasn't feeling it today.
+            # ⊤ can be derived as a consequent, but it is a constant, not a variable
+            true_vars.discard('⊤')
 
-        except ValueError as e:
-            return f"Invalid Horn Formula"
+            if not is_satisfiable:
+                return "Unsatisfiable"
+            if not true_vars:
+                return "Satisfiable"  # satisfiable with every variable set to false
+            # Variables are sorted so the output is the same on every run
+            return "Satisfiable\n{" + ", ".join(repr(v) for v in sorted(true_vars)) + "}"
+
+        except ValueError:
+            return "Invalid Horn Formula"
         except Exception as e:
             return f"An unexpected error occurred during Horn solving: {e}"

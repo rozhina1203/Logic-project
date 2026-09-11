@@ -1,7 +1,4 @@
 import pytest
-from typing import List, Optional, Dict, Type, Union, Tuple
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 
 from phases.phase5.logic import Phase5
 
@@ -406,14 +403,41 @@ def test_valid_mixed_connectives_complex():
     result = phase5.process(input_data)
     assert result == "Valid Deduction"
 
-def test_invalid_assumption_outside_scope():
-    """Test assumption appearing outside of scope"""
+def test_assumption_outside_scope_is_accepted():
+    """An assumption outside any BeginScope/EndScope block is currently accepted"""
     phase5 = Phase5()
     input_data = """1    p        Premise
 2    q        Assumption
 3    p ∧ q        ∧i, 1, 2"""
     result = phase5.process(input_data)
-    assert result == "Valid Deduction"  # This might actually be valid in some systems
+    assert result == "Valid Deduction"
+
+
+def test_invalid_reference_to_line_in_closed_scope():
+    """A line inside a closed scope can't be used on its own, even if the rule would otherwise match"""
+    phase5 = Phase5()
+    input_data = """ 1    p → q        Premise
+ 2    s        Premise
+      BeginScope
+ 3      p        Assumption
+ 4      q        →e, 1, 3
+      EndScope
+ 5    q ∧ s        ∧i, 4, 2"""
+    result = phase5.process(input_data)
+    assert result == "Invalid Deduction at Line 5"
+
+
+def test_invalid_box_reference_to_later_lines():
+    """A box can't be discharged before its lines have appeared in the proof"""
+    phase5 = Phase5()
+    input_data = """ 1    p        Premise
+ 2    ¬(¬p)        ¬i, 3-4
+      BeginScope
+ 3      ¬p        Assumption
+ 4      ⊥        ¬e, 1, 3
+      EndScope"""
+    result = phase5.process(input_data)
+    assert result == "Invalid Deduction at Line 2"
 
 
 def test_invalid_circular_reference():

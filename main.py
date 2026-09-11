@@ -1,7 +1,6 @@
 # main.py
 from pathlib import Path
 
-# Import all specific phase classes
 from phases.phase1.logic import Phase1
 from phases.phase2.logic import Phase2
 from phases.phase3.logic import Phase3
@@ -15,7 +14,6 @@ PHASE_CLASSES = {
     3: Phase3,
     4: Phase4,
     5: Phase5,
-    # --- TEAMMATE: Add your other Phase classes here ---
 }
 
 
@@ -32,33 +30,14 @@ def show_menu():
 
 def get_input_file_path(phase_number: int) -> str:
     """
-    Prompts the user for an input file path and returns it.
-    Suggests a default path based on the phase number in the centralized 'data/input/' directory.
+    Returns the default input file for a phase: 'data/phase<N>_input.txt' at the project root.
+    To run a phase on a different file, use its standalone entry point instead,
+    e.g. `python -m phases.phase1.main path/to/input.txt`.
     """
-    # Construct the default path in the 'data/' directory at the project root
-    # __file__ is main.py, .parent takes it to the project root
     project_root = Path(__file__).parent
     default_filename = f"phase{phase_number}_input.txt"  # e.g., phase1_input.txt
-    default_path = project_root / "data" / default_filename
+    return str(project_root / "data" / default_filename)
 
-    # user_input = input(f"Enter input file path (e.g., {default_path} or just filename): ").strip()
-    #
-    # # If the user provides just a filename, assume it's in the 'data/' directory
-    # if user_input and not Path(user_input).is_absolute():
-    #     suggested_path = project_root / "data" / user_input
-    #     if suggested_path.exists():
-    #         return str(suggested_path)
-    #
-    # # If the user provides a relative path (e.g., "my_folder/my_file.txt"),
-    # # assume it's relative to the project root.
-    # if user_input and not Path(user_input).is_absolute():
-    #     relative_path = project_root / user_input
-    #     if relative_path.exists():
-    #         return str(relative_path)
-
-    # Otherwise, use the path as provided or the default if empty
-    # return user_input if user_input else str(default_path)
-    return str(default_path)
 
 def main():
     """Main function to run the propositional logic solver with a menu."""

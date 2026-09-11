@@ -1,4 +1,3 @@
-
 from phases.phase1.logic import Phase1
 
 # This block allows running Phase 1 independently for testing or specific execution
@@ -6,7 +5,7 @@ if __name__ == "__main__":
     import sys
 
     # For independent execution, allow user to specify input file
-    # Example usage: python phases/phase1/main.py path/to/your/input.txt
+    # Example usage (from the project root): python -m phases.phase1.main path/to/your/input.txt
     if len(sys.argv) > 1:
         input_file_path = sys.argv[1]
     else:

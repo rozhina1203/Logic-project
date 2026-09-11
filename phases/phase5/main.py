@@ -5,7 +5,7 @@ from phases.phase5.logic import Phase5
 if __name__ == "__main__":
 
     # For independent execution, allow user to specify input file
-    # Example usage: python phases/phase5/main.py path/to/your/input.txt
+    # Example usage (from the project root): python -m phases.phase5.main path/to/your/input.txt
     if len(sys.argv) > 1:
         input_file_path = sys.argv[1]
     else:

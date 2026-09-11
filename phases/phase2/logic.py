@@ -372,10 +372,10 @@ class Phase2(BasePhase):
         in the parent and child nodes.
 
         Rules applied:
-        - Parentheses are not needed for propositions or unary operators (e.g., negation).
+        - Parentheses are not needed for propositions, ⊥ or unary operators (e.g., negation).
         - Parentheses are required if the child's operator has lower precedence than the parent's operator.
-        - Parentheses may be required for operators with the same precedence, depending on associativity:
-            - Right-associative operators (e.g., →, ↔) require parentheses for the right operand.
+        - For operators with the same precedence, the right operand of → or ↔ needs parentheses,
+          because the Phase 1 parser groups equal-precedence operators from left to right.
 
         Args:
             child (Node): The child node in the parse tree.
@@ -385,7 +385,7 @@ class Phase2(BasePhase):
         Returns:
             bool: True if parentheses are needed, False otherwise.
         """
-        if child.value.isalpha() or child.value == '¬':
+        if child.value.isalpha() or child.value in ('¬', '⊥'):
             return False
 
         child_prec = self.precedence(child.value)
@@ -395,9 +395,8 @@ class Phase2(BasePhase):
         if child_prec > parent_prec:
             return True
 
-        # Same precedence might need parentheses based on associativity
+        # Same precedence: → and ↔ are not associative, so a nested right operand keeps its parentheses
         if child_prec == parent_prec:
-            # For right-associative operators or right operand
             if not is_left and parent.value in ['→', '↔']:
                 return True
 
