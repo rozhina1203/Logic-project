@@ -326,5 +326,5 @@ For `MT`, the implication is referenced first and the negated consequent second.
 
 ## Contributors
 
-- Erfan Abbasi ([@Erfan4708](https://github.com/Erfan4708))
 - [@rozhina1203](https://github.com/rozhina1203)
+- [@Erfan4708](https://github.com/Erfan4708)
